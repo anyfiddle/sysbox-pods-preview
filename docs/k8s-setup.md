@@ -6,13 +6,17 @@ to installing Sysbox.
 These steps do not include the installation of Sysbox itself, which is
 done easily via a daemonset as described in the [README file](../README.md#sysbox-installation).
 
+The steps are mainly to ensure the nodes have the required OS distro, K8s has
+the required version, and that the worker nodes where Sysbox will be installed
+use CRI-O as the runtime.
+
 ## Contents
 
 *   [K8s Master Node Setup](#k8s-master-node-setup)
 *   [K8s Worker Node Setup](#k8s-worker-node-setup)
     *   [Installing Ubuntu Focal or Bionic](#installing-ubuntu-focal-or-bionic)
     *   [Installing CRI-O on a K8s Worker Node](#installing-cri-o-on-a-k8s-worker-node)
-    *   [Configuring the K8s Kubelet to use CRI-O](#configuring-the-k8s-kubelet-to-use-cri-o)
+    *   [Configuring K8s to use CRI-O](#configuring-k8s-to-use-cri-o)
     *   [Installing Shiftfs on a K8s Worker Node](#installing-shiftfs-on-a-k8s-worker-node)
 
 ## K8s Master Node Setup
@@ -51,7 +55,8 @@ The sub-sections below describe each of these in detail.
 
 ### Installing Ubuntu Focal or Bionic
 
-Make sure your host has Ubuntu Focal (20.04) or Ubuntu Bionic (18.04).
+Make sure your worker node host has Ubuntu Focal (20.04) or Ubuntu Bionic
+(18.04).
 
 The kernel should be >= 5.0. If using Ubuntu Bionic and the kernel is < 5.0, you
 can upgrade it with:
@@ -65,23 +70,23 @@ $ sudo apt-get update && sudo apt install --install-recommends linux-generic-hwe
 CRI-O is a light-weight container manager/runtime developed specifically for K8s
 (primarily by RedHat). It's a lighter alternative to the heavier containerd.
 
-CRI-O logically sits between K8s and low-level container runtimes such as
+CRI-O logically sits between the Kubelet and low-level container runtimes such as
 Sysbox. When deploying a pod, the K8s control plane sends an instruction to the
 Kubelet on a node, and Kubelet sends the instruction to CRI-O. CRI-O then works
 with the low-level runtime (e.g., OCI runc or Sysbox) to create the pod.
 
-CRI-O v1.20 introduces support for "rootless pods". That is, launching K8s
-pods in which the root user on the pod maps to an unprivileged user on the
-host via the Linux user-namespace. This is a key feature required for creating
-pods with Sysbox.
+CRI-O v1.20 introduces support for "rootless pods", meaning pods in which the
+root user on the pod maps to an unprivileged user on the host via the Linux
+user-namespace. This results in increased container isolation and is a key
+feature required for creating pods with Sysbox.
 
 Thus, CRI-O v1.20 is required on the K8s worker nodes where Sysbox will be
 installed.
 
-*   NOTE: Do **NOT** install CRI-O versions earlier that v1.20, as they don't support
+*   Do **NOT** install CRI-O versions earlier that v1.20, as they don't support
     rootless pods and thus won't work with Sysbox.
 
-*   NOTE: Do **NOT** install CRI-O v1.21 as it has a problem that breaks isolation in
+*   Do **NOT** install CRI-O v1.21 as it has a problem that breaks isolation in
     rootless pods (i.e., maps the pod's root user to the root user on the
     host). We are working to resolve this with the CRI-O developers.
 
@@ -89,7 +94,7 @@ installed.
 
 The installation steps for CRI-O are here: https://cri-o.io/
 
-For example, to install CRI-O on a Ubuntu-Focal host follow these steps.
+For example, to install CRI-O v1.20 on a Ubuntu-Focal (20.04) host follow these steps.
 
 As root:
 
@@ -104,7 +109,9 @@ curl -L https://download.opensuse.org/repositories/devel:kubic:libcontainers:sta
 curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/Release.key | apt-key add -
 
 apt-get update
-apt-get install cri-o cri-o-runc
+apt-get install -y cri-o cri-o-runc
+
+systemctl restart crio
 ```
 
 If all is well, then the CRI-O systemd service unit should be running:
@@ -117,14 +124,23 @@ $ systemctl status crio
        Docs: https://github.com/cri-o/cri-o
 ```
 
+Note: the CRI-O log (`journalctl -u crio`) may show errors such as:
+
+```
+Error validating CNI config ...
+The binary conntrack is not installed ...
+```
+
+Ignore these for now; they may occur when K8s is not yet installed on the node.
+
 Next we will configure CRI-O, and later we will configure K8s to use CRI-O.
 
 #### CRI-O Configuration
 
-In order to use CRI-O with K8s and Sysbox, you must set the following
-configurations:
+In order to use CRI-O with K8s and Sysbox, you must make the following
+configurations on the worker node:
 
-1.  Add an entry for user "containers" to the `/etc/subuid` file on the host. For example:
+1.  Add an entry for user `containers` to the `/etc/subuid` file on the host. For example:
 
 ```console
 $ cat /etc/subuid
@@ -140,12 +156,11 @@ mappings from range of user "containers" in these files.
 For example, it will map the user ID range \[0:65535] on the pod to the
 unprivileged user ID range \[165536:231071] on the host. This way the processes
 running in the pod will have permission to access resources inside the pod only.
-
-Notice that since `/etc/subuid` entry for user "containers" has a range of
+Notice that since the `/etc/subuid` entry for user "containers" has a range of
 268435456, CRI-O can map up to (268435456 / 65536) = 4096 pods on that host
 without collision.
 
-2.  By default CRI-O uses systemd-managed cgroups for containers. However, K8s
+2.  By default, CRI-O uses systemd-managed cgroups for containers but K8s
     uses legacy cgroups. Thus, you must either configure CRI-O to use legacy
     cgroups or alternatively configure K8s to use systemd-managed cgroups.
 
@@ -173,13 +188,10 @@ Alternatively, to configure K8s to use systemd-managed cgroups, follow the steps
 
 Either cgroup mode (legacy or systemd-managed) works with Sysbox.
 
-### Configuring the K8s Kubelet to use CRI-O
+### Configuring K8s to use CRI-O
 
 Once CRI-O is installed on the Kubernetes worker node, the next step is to
-configure the K8s Kubelet to use CRI-O.
-
-Note that starting with K8s v1.20, K8s uses containerd as the default container
-runtime (prior to v1.20 it used Docker via the "Dockershim").
+configure the Kubelet to use CRI-O. By default the Kubelet will use containerd.
 
 The way you do this configuration depends on whether you are initializing K8s on
 the worker node for the first time, or whether K8s is already installed and you
@@ -193,24 +205,52 @@ If you are doing a fresh initialization of K8s on a worker node (i.e., you are
 joining the worker node to a K8s cluster) then you are typically doing this with
 the K8s [kubeadm][kubeadm] tool.
 
-If that's the case, configuring K8s to use CRI-O on the node is trivial. Simply
+In this case initializing K8s to use CRI-O on the node is trivial. Simply
 add the `--cri-socket="/var/run/crio/crio.sock"` option to the `kubeadm join`
 command.
 
-For example, assuming you've setup a K8s control plane with:
+For example, assuming you've setup a K8s control plane node with:
 
 ```console
 $ kubeadm init --kubernetes-version=v1.20.2 --pod-network-cidr=10.244.0.0/16
 ```
 
-then you can initialize a worker node and configure to use CRI-O with:
+You can get the command for worker nodes to join the cluster with:
 
 ```console
-$ kubeadm token create --print-join-command 2> /dev/nul
-$ kubeadm join --cri-socket="/var/run/crio/crio.sock" <join-token-from-prior-command>
+$ kubeadm token create --print-join-command 2> /dev/null
+kubeadm join 192.168.121.5:6443 --token 86e4wc.nc2ru2agneshhxs3     --discovery-token-ca-cert-hash sha256:f85bf08d95b318db3d3eb7c5f9601bd7b077bfa67dfc35862ccd8652162212c6
 ```
 
-This assumes that CRI-O is installed on the node, as described [above](#installing-cri-o-on-a-k8s-worker-node).
+Then on each worker node, first [install kubeadm](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/):
+
+```console
+$ sudo swapoff -a
+
+$ sudo modprobe br_netfilter
+$ sudo sh -c "echo 1 > /proc/sys/net/ipv4/ip_forward"
+$ sudo sh -c "echo 1 > net.bridge.bridge-nf-call-ip6tables"
+$ sudo sh -c "echo 1 > net.bridge.bridge-nf-call-iptables"
+
+$ sudo apt-get update
+$ sudo apt-get install -y apt-transport-https ca-certificates curl
+$ sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+$ echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+$ sudo apt-get update
+$ sudo apt-get install -y kubelet=1.20.2-00 kubeadm=1.20.2-00 kubectl=1.20.2-00
+```
+
+Now restart CRI-O (so that it picks up the K8s CNI):
+
+```console
+$ sudo systemctl restart crio
+```
+
+Finally join the worker node to the cluster (notice the `--cri-socket` option):
+
+```console
+$ kubeadm join 192.168.121.5:6443 --cri-socket="/var/run/crio/crio.sock" --token 86e4wc.nc2ru2agneshhxs3     --discovery-token-ca-cert-hash sha256:f85bf08d95b318db3d3eb7c5f9601bd7b077bfa67dfc35862ccd8652162212c6
+```
 
 If all is good, then K8s will see the newly added worker node reach the "Ready"
 state within a minute or so.
@@ -257,28 +297,24 @@ $ systemctl status kubelet
 $ kubectl get nodes
 ```
 
-If all is good, the worker node which we just reconfigured the kubelet should
-show up as "Ready" in K8s.
+If all is good, the worker node in which we just reconfigured the kubelet should
+show up as "Ready" in the K8s node list.
 
 ### Installing Shiftfs on a K8s Worker Node
 
 Shiftfs is a kernel module that perform user-ID and group-ID "shifting". It's
-needed if you will be mounting host files or directories onto pods created
-with K8s + Sysbox (i.e., hostPath volumes).
-
-If you won't be mounting hostPath volumes onto Sysbox pods, shiftfs is not
-required.
+needed if you will be mounting host files or directories onto pods created with
+K8s + Sysbox (i.e., hostPath volumes). If you won't be mounting hostPath volumes
+onto Sysbox pods, shiftfs is not required.
 
 Shiftfs comes by default in Ubuntu desktop and server versions, but
 unfortunately it's not included in cloud versions (e.g., Ubuntu AWS AMIs). You
-can run `modinfo shiftfs` on a host to verify it's presence.
+can run `modinfo shiftfs` on a host to verify it's presence. If shiftfs is
+included, then you don't have to do anything else. If it's not included, you can
+install it manually.
 
-If shiftfs is included, then you don't have to do anything else. If it's not
-included, you can install it manually.
-
-It's pretty easy to install there is a shiftfs dynamic kernel module (DKMS) here:
-
-https://github.com/toby63/shiftfs-dkms
+It's pretty easy to install shiftfs as there is a dynamic kernel module (DKMS)
+here: https://github.com/toby63/shiftfs-dkms
 
 *   NOTE: shiftfs is only supported on Ubuntu-based kernels at this time. Even if
     you manage to build and install it on non-Ubuntu kernels, Ubuntu carries other
@@ -315,5 +351,7 @@ That's it!
 
 Once the K8s node is configured as described above, you can install Sysbox
 as shown [here](../README.md#sysbox-installation).
+
+If you hit problems, see the [troubleshooting](troubleshoot.md) doc.
 
 [kubeadm]: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/

@@ -1,5 +1,51 @@
 # K8s Node Troubleshooting
 
+## Pod stuck in "Creating" status
+
+If you are deploying a pod with Sysbox and it gets stuck in the "Creating"
+state for a long time (e.g., > 1 minute), then something is likely wrong.
+
+To debug, start by checking the CRI-O and Kubelet logs on the node where
+the pod was scheduled:
+
+```console
+journalctl -eu crio
+journalctl -eu kubelet
+```
+
+These often have information that helps pin-point the problem.
+
+If the kubelet log shows an error such as `failed to find runtime handler sysbox-runc from runtime list`,
+then this means CRI-O has not recognized Sysbox for some reason.
+
+In this case, double check that the CRI-O config has the Sysbox runtime
+directive in it (the sysbox-deploy-k8s daemonset should have set this config):
+
+```console
+$ cat /etc/crio/crio.conf
+
+...
+
+[crio.runtime.runtimes.sysbox-runc]
+allowed_annotations = ["io.kubernetes.cri-o.userns-mode"]
+runtime_path = "/usr/bin/sysbox-runc"
+runtime_type = "oci"
+
+...
+```
+
+If the sysbox runtime config is present, then try restarting CRI-O on the worker node:
+
+```
+systemctl restart crio
+```
+
+Note that restarting CRI-O will cause all pods on the node to be restarted
+(including the kube-proxy and CNI pods).
+
+If the sysbox runtime config is not present, then [uninstall](../README.md#sysbox-uninstallation)
+and re-install[../README.md#sysbox-installation) the sysbox daemonset.
+
 ### Sysbox health status
 
 ```console

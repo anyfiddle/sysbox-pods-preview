@@ -1,4 +1,4 @@
-# Sysbox Pods Feature Preview
+# Nestybox: Sysbox-Pods Feature Preview
 
 ***
 
@@ -11,9 +11,13 @@ the documentation and other artifacts will be moved to the Sysbox repo.**
 The Sysbox pods feature enables deployment of Kubernetes (K8s) pods using the
 [Sysbox](https://github.com/nestybox/sysbox) runtime.
 
-With Sysbox, K8s can deploy strongly isolated (rootless) pods that can act as
-container-based "VMs", capable of seamlessly running systemd, Docker, and even
-Kubernetes in them.
+With Sysbox, K8s can deploy strongly isolated (rootless) pods that can run
+not just microservices, but also workloads such as systemd, Docker, and
+even K8s, seamlessly.
+
+You can use Sysbox for improving the security of your K8s pods and for deploying
+VM-like environments inside pods (quickly and efficiently, without actually
+using virtual machines).
 
 Prior to Sysbox, running such pods required using privileged pods and very
 complex pod setups and entrypoints. This is insecure (privileged pods allow
@@ -46,7 +50,7 @@ according to your needs.
 Installation is done via a daemonset which "drops" the Sysbox binaries onto the
 desired K8s nodes (steps are shown later).
 
-**NOTE**: the daemonset currently drops a preview version of the Sysbox Enterprise
+**NOTE**: the daemonset currently installs a preview version of the Sysbox Enterprise
 Edition as this is the initial edition on which Sysbox pods will be
 supported. Sysbox-EE has a 30 day free trial. Please contact Nestybox if you
 need an extension.
@@ -56,17 +60,17 @@ with Sysbox. You can choose which pods use Sysbox via the pod's spec. Pods that
 don't use Sysbox continue to use the default low-level runtime (i.e., the OCI
 runc) or any other runtime you choose.
 
-Pods deployed with Sysbox are managed via K8s just like any other pods, and can
-live side-by-side with non Sysbox pods, and can communicate with them according
-to your K8s networking policy.
+Pods deployed with Sysbox are managed via K8s just like any other pods, can live
+side-by-side with non Sysbox pods, and can communicate with them according to
+your K8s networking policy.
 
 ## Kubernetes Version Requirements
 
 Sysbox is only supported on Kubernetes v1.20.\* at this time.
 
 The reason for this is that Sysbox requires the presence of the CRI-O runtime
-v1.20, as it introduces support for rootless pods. Since the CRI-O and K8s
-versions must match, the K8s version must also be v1.20.\*.
+v1.20, as it introduces support for rootless pods. Since the version of CRI-O
+and K8s must match, the K8s version must also be v1.20.\*.
 
 To setup a K8s v1.20 cluster, see the [K8s Cluster Prep for Sysbox](docs/k8s-setup.md) document.
 
@@ -75,7 +79,8 @@ To setup a K8s v1.20 cluster, see the [K8s Cluster Prep for Sysbox](docs/k8s-set
 Once you have a K8s v1.20 cluster up and running, you need to install Sysbox
 on one or more worker nodes.
 
-Each node where you will install Sysbox must meet the following requirements:
+Prior to installing Sysbox, ensure each node where you will install Sysbox meets
+the following requirements:
 
 1.  The node's OS must be Ubuntu Focal or Bionic (with a 5.0+ kernel).
 
@@ -101,7 +106,7 @@ $ kubectl label nodes <node-name> name=sysbox-deploy-k8s
 ```
 
 You should only label K8s worker nodes. Do NOT label K8s master nodes because
-the Sysbox deploy daemonset will restart CRI-O, thus bring down the node
+the Sysbox deploy daemonset will restart CRI-O, thus bringing down the node
 temporarily (and you don't want to bring down the K8s control-plane in the
 process).
 
@@ -114,8 +119,8 @@ $ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-previe
 
 This will cause K8s to run the sysbox installation daemonset on all nodes
 labeled with "sysbox-deploy" in the prior step. The daemonset will "drop" Sysbox
-into the node and configure CRI-O appropriately. Once it does this the daemonset
-will remain idle until deleted.
+into the node and configure CRI-O appropriately (takes a few seconds). After
+this the daemonset will remain idle until deleted.
 
 Be sure to apply the `sysbox-rbac.yaml` before the `sysbox-deploy-k8s.yaml`, as
 otherwise K8s won't schedule the daemonset.
@@ -199,6 +204,14 @@ namespace between containers in a pod. Thus, avoid setting
 `shareProcessNamespace: true` in the pod's spec, especially if the pod carries
 systemd inside (as otherwise systemd won't be pid 1 in the pod and will fail).
 
+Depending on the size of the pod's image, it may take several seconds for the
+pod to deploy on the node. Once the image is downloaded on a node however,
+deployment should be very quick (few seconds).
+
+## Kubernetes Manifests
+
+The K8s manifests used for setting up Sysbox can be found [here](k8s-manifests).
+
 ## Sysbox Container Images
 
 The pod in the prior example uses the
@@ -215,7 +228,7 @@ Some of those images carry systemd only, others carry systemd + Docker, other
 carry systemd + K8s (yes, you can run K8s inside rootless pods deployed by
 Sysbox).
 
-## Volume Mounts
+## Host Volume Mounts
 
 To mount host volumes into a K8s pod deployed with Sysbox, the K8s worker node's
 kernel must include the `shiftfs` kernel module (see
@@ -224,8 +237,9 @@ info).
 
 This is because such Sysbox pods are rootless, meaning that the root user inside
 the pod maps to a non-root user on the host (e.g., pod user ID 0 maps to host
-user ID 296608). Thus, host directories or files which are typically owned by
-users IDs in the range 0->65535 will show up as `nobody:nogroup` inside the pod.
+user ID 296608). Without shiftfs, host directories or files which are typically
+owned by users IDs in the range 0->65535 will show up as `nobody:nogroup` inside
+the pod.
 
 The shiftfs module solves this problem, as it allows Sysbox to "shift" user
 and group IDs inside the pod, such that files owned by users 0->65536 on the
@@ -263,7 +277,8 @@ spec:
 ```
 
 When this pod is deployed, Sysbox will automatically enable shiftfs on the pod's
-`/mnt/host-dir`.
+`/mnt/host-dir`. As a result that directory will show up with proper user-ID and
+group-ID ownership inside the pod.
 
 With shiftfs you can even share the same host directory across pods, even if
 the pods each get exclusive Linux user-namespace user-ID and group-ID mappings.
@@ -302,9 +317,17 @@ $ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-previ
 $ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml?token=ADCIOCA6LHILZETBXBBH32LASHVQC
 ```
 
+This will uninstall Sysbox from the nodes and remove the
+"sysbox-runtime=running" label from them.
+
+If in addition to removing Sysbox you want to remove CRI-O from the node (e.g.,
+go back to containerd), then you need to revert the steps shown in the [node preparation doc](docs/k8s-setup.md).
+
 ## Troubleshooting
 
-See the [troubleshooting](docs/troubleshoot.md) doc.
+Please contact us if you hit any problems (see contact info below).
+
+The [troubleshooting](docs/troubleshoot.md) doc has some useful info too.
 
 ## Contact
 

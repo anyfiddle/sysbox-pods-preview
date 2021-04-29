@@ -27,7 +27,7 @@ Sysbox requires a Kubernetes cluster with version 1.20.\*.
 
 The cluster should have at least two nodes, one acting as a master and one or
 more worker nodes. Sysbox should be installed on the worker nodes only (i.e., we
-don't recommend it be installed on the master nodes for reasons described later).
+don't recommend it to be installed on the master nodes for reasons described later).
 
 To setup such a cluster with `kubeadm`, you can run the following
 command on the control plane node(s):
@@ -51,9 +51,9 @@ The worker node setup is composed of the following steps:
 
 3.  Configure the K8s Kubelet to use CRI-O
 
-4.  Install the shiftfs kernel module (recommended)
+4.  Install the shiftfs kernel module (recommended if host's volumes are required).
 
-5.  Install rsync on the node.
+5.  Install [rsync](https://packages.ubuntu.com/search?keywords=rsync) on the node.
 
 The sub-sections below describe each of these in detail.
 
@@ -201,7 +201,7 @@ configure the Kubelet to use CRI-O. By default the Kubelet will use containerd.
 
 The way you do this configuration depends on whether you are initializing K8s on
 the worker node for the first time, or whether K8s is already installed and you
-want to switch it's runtime config from containerd to CRI-O.
+want to switch its runtime config from containerd to CRI-O.
 
 Both of these are described below.
 

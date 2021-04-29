@@ -4,25 +4,31 @@
 
 **NOTE: This is a temporary repo to allow users to preview the upcoming "Sysbox pods"
 feature. Once the feature is released, this repo will cease to exist and
-the documentation and other artifacts will be moved to the Sysbox repo.**
+the documentation and other artifacts will be moved to the
+[Sysbox](https://github.com/nestybox/sysbox) repo. We would appreciate if
+you refer to Sysbox repo for any issue you that run into (or any github star that
+you may be willing to throw at us -- always welcome).**
 
 ***
 
 The Sysbox pods feature enables deployment of Kubernetes (K8s) pods using the
 [Sysbox](https://github.com/nestybox/sysbox) runtime.
 
-With Sysbox, K8s can deploy strongly isolated (rootless) pods that can run
-not just microservices, but also workloads such as systemd, Docker, and
-even K8s, seamlessly.
+In essence, Sysbox pods value-proposition is twofold: extended functionality
+and enhanced security.
 
-You can use Sysbox for improving the security of your K8s pods and for deploying
-VM-like environments inside pods (quickly and efficiently, without actually
-using virtual machines).
+With Sysbox, K8s can deploy strongly isolated (rootless) pods that can run not
+just microservices, but also workloads such as systemd, Docker, Podman (WIP)
+and even K8s, seamlessly.
 
-Prior to Sysbox, running such pods required using privileged pods and very
-complex pod setups and entrypoints. This is insecure (privileged pods allow
-users inside the pod to easily compromise the K8s host) and puts a lot of
+Prior to Sysbox, running such pods required using privileged (insecure) containers
+and very complex pod setups and entrypoints. This is insecure (privileged pods
+allow users inside the pod to easily compromise the K8s host) and puts a lot of
 complexity on the K8s cluster admin & users.
+
+You can now use Sysbox for improving the security of your K8s pods by replacing
+your existing privileged pods, and for deploying VM-like environments inside pods
+(quickly and efficiently, without actually using virtual machines).
 
 With Sysbox this insecurity and complexity go away: the pods are strongly
 isolated, and Sysbox absorbs all the complexity of setting up the pod correctly
@@ -88,9 +94,9 @@ the following requirements:
 
 3.  The node's Kubelet must be configured to use CRI-O.
 
-4.  The shiftfs kernel module should be present.
+4.  The shiftfs kernel module should be present (if host's volumes are required).
 
-5.  rsync must be installed.
+5.  [rsync](https://packages.ubuntu.com/search?keywords=rsync) must be installed.
 
 The [K8s Cluster Prep for Sysbox](docs/k8s-setup.md) document has the details
 on how to setup a worker node.

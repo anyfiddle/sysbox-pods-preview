@@ -18,6 +18,8 @@ use CRI-O as the runtime.
     *   [Installing CRI-O on a K8s Worker Node](#installing-cri-o-on-a-k8s-worker-node)
     *   [Configuring K8s to use CRI-O](#configuring-k8s-to-use-cri-o)
     *   [Installing Shiftfs on a K8s Worker Node](#installing-shiftfs-on-a-k8s-worker-node)
+    *   [Installing rsync on a K8s worker node](#installing-rsync-on-a-k8s-worker-node)
+*   [Conclusion](#conclusion)
 
 ## K8s Master Node Setup
 
@@ -41,7 +43,7 @@ where Sysbox will be installed.
 
 ## K8s Worker Node Setup
 
-The worker node setup is composed of 4 steps:
+The worker node setup is composed of the following steps:
 
 1.  Install Ubuntu Focal or Bionic (with a 5.0+ kernel) on the node.
 
@@ -50,6 +52,8 @@ The worker node setup is composed of 4 steps:
 3.  Configure the K8s Kubelet to use CRI-O
 
 4.  Install the shiftfs kernel module (recommended)
+
+5.  Install rsync on the node.
 
 The sub-sections below describe each of these in detail.
 
@@ -148,7 +152,7 @@ cesar:100000:65536
 containers:165536:268435456
 ```
 
-Same applies to `/etc/subgid`.
+Make sure the subids don't overlap. Same applies to `/etc/subgid`.
 
 When creating rootless pods, CRI-O will choose the Linux user-namespace ID
 mappings from range of user "containers" in these files.
@@ -187,6 +191,8 @@ Alternatively, to configure K8s to use systemd-managed cgroups, follow the steps
 [here](https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/).
 
 Either cgroup mode (legacy or systemd-managed) works with Sysbox.
+
+If you hit problems when re-starting CRI-O, see the [troubleshooting doc](troubleshoot.md).
 
 ### Configuring K8s to use CRI-O
 
@@ -346,6 +352,19 @@ author:         Seth Forshee <seth.forshee@canonical.com>
 author:         James Bottomley
 ...
 ```
+
+### Installing rsync on a K8s worker node
+
+Rsync is used by Sysbox for efficient data transfers inside the host (rsync data is
+never copied outside the host).
+
+Install rsync with:
+
+```
+sudo apt-get install rsync
+```
+
+## Conclusion
 
 That's it!
 

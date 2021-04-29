@@ -90,6 +90,8 @@ the following requirements:
 
 4.  The shiftfs kernel module should be present.
 
+5.  rsync must be installed.
+
 The [K8s Cluster Prep for Sysbox](docs/k8s-setup.md) document has the details
 on how to setup a worker node.
 

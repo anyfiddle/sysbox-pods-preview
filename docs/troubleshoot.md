@@ -1,5 +1,72 @@
 # K8s Node Troubleshooting
 
+## CRI-O Can't find CNI Binaries
+
+If the CRI-O log (`journalctl -u crio`) shows an error such as:
+
+```console
+Error validating CNI config file /etc/cni/net.d/10-containerd-net.conflist: [failed to find plugin in opt/cni/bin]
+```
+
+it means it can't find the binaries for the CNI. CRI-O looks for those in `/opt/cni/bin`.
+
+This error can occur when you install CRI-O before K8s on the node (i.e., the CRI-O installation
+does not include the CNIs). Once you install K8s on the node and restart CRI-O, the error
+should not longer appear (because K8s does install several CNIs).
+
+If the error persists after installing K8s, sometimes it's because K8s installed
+the CNI binaries in a different directory than what CRI-O expects. For example,
+on a GKE node K8s installs the CNI binaries at `/home/kubernetes/bin/`.
+
+To solve this, set the following configuration on the `/etc/crio/crio.conf` file
+and restart CRI-O:
+
+```console
+plugin_dirs = [
+        "/opt/cni/bin/",
+        "/home/kubernetes/bin/"
+]
+```
+
+After retarting CRI-O, it should pick the CNI binaries correctly.
+
+## Sysbox-Deploy-K8s Daemonset Fails
+
+If the sysbox-deploy-k8s daemonset fails, check it's logs via:
+
+```console
+$ kubectl -n kube-system logs <sysbox-deploy-k8s-pod>
+```
+
+Normally you should see something like this:
+
+```
+Installing Sysbox on host
+Detected host distro: ubuntu_20.04
+Configuring host sysctls
+kernel.unprivileged_userns_clone = 1
+fs.inotify.max_queued_events = 1048576
+fs.inotify.max_user_watches = 1048576
+fs.inotify.max_user_instances = 1048576
+kernel.keys.maxkeys = 20000
+kernel.keys.maxbytes = 400000
+Probing kernel modules
+
+Configfs kernel module is not loaded. Configfs may be required by certain applications running inside a Sysbox container.
+
+Shiftfs kernel module is not loaded. Shiftfs is required for host volume mounts into Sysbox containers to have proper ownership (user-ID and group-ID).
+
+Starting Sysbox
+Adding Sysbox to CRI-O config
+Adding K8s label "sysbox-runtime=running" to node
+node/gke-cluster-1-sysbox-pool-f42ba242-k0zt labeled
+Sysbox installation completed.
+Signaling CRI-O to reload it's config.
+```
+
+If the logs show an error, then there is a problem. Please [contact us](../README.md#contact) so
+we can help you resolve it.
+
 ## Pod stuck in "Creating" status
 
 If you are deploying a pod with Sysbox and it gets stuck in the "Creating"
@@ -9,8 +76,8 @@ To debug, start by checking the CRI-O and Kubelet logs on the node where
 the pod was scheduled:
 
 ```console
-journalctl -eu crio
-journalctl -eu kubelet
+$ journalctl -eu crio
+$ journalctl -eu kubelet
 ```
 
 These often have information that helps pin-point the problem.
@@ -50,7 +117,12 @@ and re-install[../README.md#sysbox-installation) the sysbox daemonset.
 
 ```console
 $ systemctl status sysbox
+$ systemctl status sysbox-mgr
+$ systemctl status sysbox-fs
+
 $ journalctl -eu sysbox
+$ journalctl -eu sysbox-mgr
+$ journalctl -eu sysbox-fs
 ```
 
 ### CRI-O health status

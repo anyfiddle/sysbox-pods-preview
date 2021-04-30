@@ -16,7 +16,7 @@ spec:
       serviceAccountName: sysbox-label-node
       containers:
       - name: sysbox-deploy-k8s
-        image: nestybox/sysbox-deploy-k8s
+        image: registry.nestybox.com/nestybox/sysbox-deploy-k8s
         imagePullPolicy: Always
         command: [ "bash", "-c", "/opt/sysbox/scripts/sysbox-deploy-k8s.sh install" ]
         env:

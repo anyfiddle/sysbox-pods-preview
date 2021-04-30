@@ -177,7 +177,7 @@ Deploying pods with Sysbox is easy: you only need a couple of
 things in the pod spec.
 
 For example, here is a sample pod spec using the
-`nestybox/ubuntu-bionic-systemd-docker` image. It creates a rootless pod that
+`ubuntu-bionic-systemd-docker` image. It creates a rootless pod that
 runs systemd as init (pid 1) and comes with Docker (daemon + CLI) inside:
 
 ```yaml
@@ -191,7 +191,7 @@ spec:
   runtimeClassName: sysbox-runc
   containers:
   - name: ubu-bio-systemd-docker
-    image: ghcr.io/nestybox/ubuntu-bionic-systemd-docker
+    image: registry.nestybox.com/nestybox/ubuntu-bionic-systemd-docker
     command: ["/sbin/init"]
   restartPolicy: Never
 ```
@@ -223,7 +223,7 @@ The K8s manifests used for setting up Sysbox can be found [here](k8s-manifests).
 ## Sysbox Container Images
 
 The pod in the prior example uses the
-`ghcr.io/nestybox/ubuntu-bionic-systemd-docker`, but you can use any container
+`ubuntu-bionic-systemd-docker`, but you can use any container
 image you want. Sysbox places no requirements on the container image.
 
 Nestybox has several images which you can find here:
@@ -231,6 +231,10 @@ Nestybox has several images which you can find here:
 https://hub.docker.com/u/nestybox
 
 Those same images are in the Nestybox GitHub registry (`ghcr.io/nestybox/<image-name>`).
+
+We usually rely on `registry.nestybox.com` as an image front-end so that docker
+image pulls are forwarded to the most suitable repository without impacting our
+users.
 
 Some of those images carry systemd only, others carry systemd + Docker, other
 carry systemd + K8s (yes, you can run K8s inside rootless pods deployed by
@@ -271,7 +275,7 @@ spec:
   runtimeClassName: sysbox-runc
   containers:
   - name: ubu-bio-systemd-docker
-    image: ghcr.io/nestybox/ubuntu-bionic-systemd-docker
+    image: registry.nestybox.com/nestybox/ubuntu-bionic-systemd-docker
     command: ["/sbin/init"]
     volumeMounts:
       - mountPath: /mnt/host-dir

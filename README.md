@@ -12,7 +12,7 @@ sufficient feedback).**
 documentation and other artifacts will be moved to the Sysbox repo.**
 
 **Having said this, we would appreciate if you refer to Sysbox repo for any GitHub
-star that you may be willing to throw at us -- always welcomed!.**
+star that you may be willing to throw at us -- always welcomed!**
 
 ***
 
@@ -38,6 +38,13 @@ your existing privileged pods, and for deploying VM-like environments inside pod
 With Sysbox this insecurity and complexity go away: the pods are strongly
 isolated, and Sysbox absorbs all the complexity of setting up the pod correctly
 to run the above-mentioned workloads.
+
+## Demo Video
+
+Here is a video showing how to use K8s + Sysbox to deploy a rootless pod that runs
+systemd and Docker inside:
+
+https://asciinema.org/a/401488?speed=1.5
 
 ## Contents
 

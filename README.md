@@ -3,11 +3,16 @@
 ***
 
 **NOTE: This is a temporary repo to allow users to preview the upcoming "Sysbox pods"
-feature. Once the feature is released, this repo will cease to exist and
-the documentation and other artifacts will be moved to the
-[Sysbox](https://github.com/nestybox/sysbox) repo. We would appreciate if
-you refer to Sysbox repo for any github star that you may be willing to throw at
-us -- always welcomed!).**
+feature. The feature is only present via this repo. It's not yet in the [Sysbox](https://github.com/nestybox/sysbox) or
+[Sysbox Enterprise](https://github.com/nestybox/sysbox-ee) repos, but it's
+expected to land there in a few weeks (ideally after we've received
+sufficient feedback).**
+
+**Once the feature is released, this current repo will cease to exist and the
+documentation and other artifacts will be moved to the Sysbox repo.**
+
+**Having said this, we would appreciate if you refer to Sysbox repo for any GitHub
+star that you may be willing to throw at us -- always welcomed!.**
 
 ***
 

@@ -94,7 +94,8 @@ the following requirements:
 
 3.  The node's Kubelet must be configured to use CRI-O.
 
-4.  The shiftfs kernel module should be present (if host's volumes are required).
+4.  The shiftfs kernel module should be present (if you want to mount host files
+    or directories into sysbox-based pods).
 
 5.  [rsync](https://packages.ubuntu.com/search?keywords=rsync) must be installed.
 
@@ -126,9 +127,9 @@ $ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-previe
 ```
 
 This will cause K8s to run the sysbox installation daemonset on all nodes
-labeled with "sysbox-deploy" in the prior step. The daemonset will "drop" Sysbox
-into the node and configure CRI-O appropriately (takes a few seconds). After
-this the daemonset will remain idle until deleted.
+labeled with `name=sysbox-deploy-k8s` in the prior step. The daemonset will
+"drop" Sysbox into the node and configure CRI-O appropriately (takes a few
+seconds). After this the daemonset will remain idle until deleted.
 
 Be sure to apply the `sysbox-rbac.yaml` before the `sysbox-deploy-k8s.yaml`, as
 otherwise K8s won't schedule the daemonset.

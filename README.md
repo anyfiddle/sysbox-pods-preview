@@ -6,8 +6,8 @@
 feature. Once the feature is released, this repo will cease to exist and
 the documentation and other artifacts will be moved to the
 [Sysbox](https://github.com/nestybox/sysbox) repo. We would appreciate if
-you refer to Sysbox repo for any issue you that run into (or any github star that
-you may be willing to throw at us -- always welcome).**
+you refer to Sysbox repo for any github star that you may be willing to throw at
+us -- always welcome!).**
 
 ***
 

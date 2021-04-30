@@ -7,7 +7,7 @@ feature. Once the feature is released, this repo will cease to exist and
 the documentation and other artifacts will be moved to the
 [Sysbox](https://github.com/nestybox/sysbox) repo. We would appreciate if
 you refer to Sysbox repo for any github star that you may be willing to throw at
-us -- always welcome!).**
+us -- always welcomed!).**
 
 ***
 
@@ -121,8 +121,8 @@ process).
 2.  Deploy the Sysbox installation daemonset:
 
 ```console
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml?token=ADCIOCA6LHILZETBXBBH32LASHVQC
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-deploy-k8s.yaml?token=ADCIOCCWVT7V5LQ4LRII3QDASHVMQ
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-deploy-k8s.yaml
 ```
 
 This will cause K8s to run the sysbox installation daemonset on all nodes
@@ -162,7 +162,7 @@ k8s-node2   Ready    <none>                 3d6h    v1.20.2   beta.kubernetes.io
 5.  Add the Sysbox "runtime class" resource to K8s.
 
 ```console
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/runtime-class/sysbox-runtimeclass.yaml?token=ADCIOCH4GEERFPPQOUI4Z43ASHWTU
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/runtime-class/sysbox-runtimeclass.yaml
 ```
 
 The runtime class informs Kubernetes that there is a new container runtime
@@ -312,21 +312,21 @@ $ kubectl delete runtimeclass sysbox-runc
 *   Delete the "sysbox-deploy-k8s" daemonset:
 
 ```console
-$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-deploy-k8s.yaml?token=ADCIOCCWVT7V5LQ4LRII3QDASHVMQ
+$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-deploy-k8s.yaml
 ```
 
 *   Apply and delete the "sysbox-cleanup-k8s" daemonset (this is the one that
     actually removes Sysbox from the node and restarts CRI-O):
 
 ```console
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml?token=ADCIOCCAJ4UWXBRLHLR6NTTASIILI
-$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml?token=ADCIOCCAJ4UWXBRLHLR6NTTASIILI
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml
+$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml
 ```
 
 *   Finally, remove the sysbox RBAC daemonset.
 
 ```console
-$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml?token=ADCIOCA6LHILZETBXBBH32LASHVQC
+$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml
 ```
 
 This will uninstall Sysbox from the nodes and remove the

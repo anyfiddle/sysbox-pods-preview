@@ -315,7 +315,7 @@ onto Sysbox pods, shiftfs is not required.
 
 Shiftfs comes by default in Ubuntu desktop and server versions, but
 unfortunately it's not included in cloud versions (e.g., Ubuntu AWS AMIs). You
-can run `modinfo shiftfs` on a host to verify it's presence. If shiftfs is
+can run `modinfo shiftfs` on a host to verify its presence. If shiftfs is
 included, then you don't have to do anything else. If it's not included, you can
 install it manually.
 

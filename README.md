@@ -68,11 +68,6 @@ according to your needs.
 Installation is done via a daemonset which "drops" the Sysbox binaries onto the
 desired K8s nodes (steps are shown later).
 
-**NOTE**: the daemonset currently installs a preview version of the Sysbox Enterprise
-Edition as this is the initial edition on which Sysbox pods will be
-supported. Sysbox-EE has a 30 day free trial. Please contact Nestybox if you
-need an extension.
-
 Installing Sysbox on a node does not imply all pods on the node are deployed
 with Sysbox. You can choose which pods use Sysbox via the pod's spec. Pods that
 don't use Sysbox continue to use the default low-level runtime (i.e., the OCI

@@ -1,5 +1,108 @@
 # K8s Node Troubleshooting
 
+## Contents
+
+*   [The sysbox-deploy-k8s daemonset causes pods to enter "Error" state](#the-sysbox-deploy-k8s-daemonset-causes-pods-to-enter-error-state)
+*   [CRI-O Can't find CNI Binaries](#cri-o-cant-find-cni-binaries)
+*   [Pod stuck in "Creating" status](#pod-stuck-in-creating-status)
+*   [Sysbox health status](#sysbox-health-status)
+*   [CRI-O health status](#cri-o-health-status)
+*   [Kubelet health status](#kubelet-health-status)
+*   [Low-level Debug with crictl](#low-level-debug-with-crictl)
+
+## The sysbox-deploy-k8s daemonset causes pods to enter "Error" state
+
+During [Sysbox installation](../README.md#sysbox-installation), one of the steps
+is to run the sysbox-deploy-k8s daemonset via:
+
+```console
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-deploy-k8s.yaml
+```
+
+The sysbox-deploy-k8s daemonset configures and restarts the CRI-O container
+runtime. This is necessary for CRI-O to pick up the fact that Sysbox is present
+on the host.
+
+Unfortunately this causes all pods on the Kubernetes worker node(s) where the
+daemonset is running to be restarted. As a result, you may see something like
+this immediately after running the daemonset:
+
+```console
+$ kubectl get all --all-namespaces
+NAMESPACE     NAME                                    READY   STATUS    RESTARTS   AGE
+kube-system   pod/coredns-74ff55c5b-ff58f             1/1     Running   0          11d
+kube-system   pod/coredns-74ff55c5b-t6t5b             1/1     Error     0          11d
+kube-system   pod/etcd-k8s-node2                      1/1     Running   1          11d
+kube-system   pod/kube-apiserver-k8s-node2            1/1     Running   1          11d
+kube-system   pod/kube-controller-manager-k8s-node2   1/1     Running   1          11d
+kube-system   pod/kube-flannel-ds-4pqgp               1/1     Error     4          4d22h
+kube-system   pod/kube-flannel-ds-lkvnp               1/1     Running   0          10d
+kube-system   pod/kube-proxy-4mbfj                    1/1     Error     4          4d22h
+kube-system   pod/kube-proxy-5lfz4                    1/1     Running   0          11d
+kube-system   pod/kube-scheduler-k8s-node2            1/1     Running   1          11d
+kube-system   pod/sysbox-deploy-k8s-rbl76             1/1     Error     1          136m
+```
+
+This is a condition that should resolve itself within 30 secs to 1 minute after
+running the sysbox-deploy-k8s daemonset, as CRI-O will restart and Kubernetes
+will automatically restart the affected pods.
+
+If the sysbox-deploy-k8s daemonset ran successfully, you should see the following:
+
+1.  The installation daemonset will add the label `sysbox-runtime=running` to
+    nodes where Sysbox was installed:
+
+```console
+$ kubectl get nodes --show-labels
+NAME        STATUS   ROLES                  AGE     VERSION   LABELS
+k8s-node1   Ready    control-plane,master   3d21h   v1.20.2   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=k8s-node1,kubernetes.io/os=linux,node-role.kubernetes.io/control-plane=,node-role.kubernetes.io/master=
+k8s-node2   Ready    <none>                 3d6h    v1.20.2   beta.kubernetes.io/arch=amd64,beta.kubernetes.io/os=linux,kubernetes.io/arch=amd64,kubernetes.io/hostname=k8s-node2,kubernetes.io/os=linux,name=sysbox-deploy,sysbox-runtime=running
+```
+
+2.  The sysbox-deploy-k8s logs should show the following:
+
+```console
+$ kubectl -n kube-system logs pod/sysbox-deploy-k8s-rbl76
+Sysbox is running on the node.
+Done.
+```
+
+Those are the logs from the sysbox-deploy-k8s daemonset after it's restarted by
+Kubernetes (since it also entered the error state when CRI-O was restarted).
+
+In addition, the "previous" logs for the sysbox-deploy-k8s daemonset should show:
+
+```console
+$ kubectl -n kube-system logs -p pod/sysbox-deploy-k8s-rbl76
+Installing Sysbox on host
+Detected host distro: ubuntu_20.04
+Configuring host sysctls
+kernel.unprivileged_userns_clone = 1
+fs.inotify.max_queued_events = 1048576
+fs.inotify.max_user_watches = 1048576
+fs.inotify.max_user_instances = 1048576
+kernel.keys.maxkeys = 20000
+kernel.keys.maxbytes = 400000
+Probing kernel modules
+
+Configfs kernel module is not loaded. Configfs may be required by certain applications running inside a Sysbox container.
+
+Starting Sysbox
+Adding Sysbox to CRI-O config
+Adding K8s label "sysbox-runtime=running" to node
+node/k8s-node3 labeled
+Sysbox installation completed.
+Restarting CRI-O (this will temporarily disrupt all pods on the K8s node (for up to 1 minute)).
+/opt/sysbox/scripts/sysbox-deploy-k8s.sh: line 221:    71 Terminated              systemctl restart crio
+```
+
+Those logs show the original execution of the daemonset, up to when it restarted
+CRI-O (at which point the daemonset pod was terminated and later restarted).
+
+If for some reason you do not see these logs, please [contact us](../README.md#contact)
+and we will be happy to help.
+
 ## CRI-O Can't find CNI Binaries
 
 If the CRI-O log (`journalctl -u crio`) shows an error such as:
@@ -28,44 +131,7 @@ plugin_dirs = [
 ]
 ```
 
-After retarting CRI-O, it should pick the CNI binaries correctly.
-
-## Sysbox-Deploy-K8s Daemonset Fails
-
-If the sysbox-deploy-k8s daemonset fails, check it's logs via:
-
-```console
-$ kubectl -n kube-system logs <sysbox-deploy-k8s-pod>
-```
-
-Normally you should see something like this:
-
-```
-Installing Sysbox on host
-Detected host distro: ubuntu_20.04
-Configuring host sysctls
-kernel.unprivileged_userns_clone = 1
-fs.inotify.max_queued_events = 1048576
-fs.inotify.max_user_watches = 1048576
-fs.inotify.max_user_instances = 1048576
-kernel.keys.maxkeys = 20000
-kernel.keys.maxbytes = 400000
-Probing kernel modules
-
-Configfs kernel module is not loaded. Configfs may be required by certain applications running inside a Sysbox container.
-
-Shiftfs kernel module is not loaded. Shiftfs is required for host volume mounts into Sysbox containers to have proper ownership (user-ID and group-ID).
-
-Starting Sysbox
-Adding Sysbox to CRI-O config
-Adding K8s label "sysbox-runtime=running" to node
-node/gke-cluster-1-sysbox-pool-f42ba242-k0zt labeled
-Sysbox installation completed.
-Signaling CRI-O to reload it's config.
-```
-
-If the logs show an error, then there is a problem. Please [contact us](../README.md#contact) so
-we can help you resolve it.
+After restarting CRI-O, it should pick the CNI binaries correctly.
 
 ## Pod stuck in "Creating" status
 
@@ -103,7 +169,7 @@ runtime_type = "oci"
 
 If the sysbox runtime config is present, then try restarting CRI-O on the worker node:
 
-```
+```console
 systemctl restart crio
 ```
 
@@ -111,9 +177,9 @@ Note that restarting CRI-O will cause all pods on the node to be restarted
 (including the kube-proxy and CNI pods).
 
 If the sysbox runtime config is not present, then [uninstall](../README.md#sysbox-uninstallation)
-and re-install[../README.md#sysbox-installation) the sysbox daemonset.
+and re-install\[../README.md#sysbox-installation) the sysbox daemonset.
 
-### Sysbox health status
+## Sysbox health status
 
 ```console
 $ systemctl status sysbox
@@ -125,21 +191,21 @@ $ journalctl -eu sysbox-mgr
 $ journalctl -eu sysbox-fs
 ```
 
-### CRI-O health status
+## CRI-O health status
 
 ```console
 $ systemctl status crio
 $ journalctl -eu crio
 ```
 
-### Kubelet health status
+## Kubelet health status
 
 ```console
 $ systemctl status kubelet
 $ journalctl -eu kubelet
 ```
 
-### crictl
+## Low-level Debug with crictl
 
 The `crictl` tool can be used to communicate with CRI implementations directly
 (e.g., CRI-O or containerd). `crictl` is typically present in K8s nodes. If for

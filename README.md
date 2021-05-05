@@ -53,8 +53,9 @@ https://asciinema.org/a/401488?speed=1.5
 *   [Kubernetes Node Requirements](#kubernetes-node-requirements)
 *   [Sysbox Installation](#sysbox-installation)
 *   [Sysbox Pods Deployment](#sysbox-pods-deployment)
+*   [Kubernetes Manifests](#kubernetes-manifests)
 *   [Sysbox Container Images](#sysbox-container-images)
-*   [Volume Mounts](#volume-mounts)
+*   [Host Volume Mounts](#host-volume-mounts)
 *   [Sysbox Uninstallation](#sysbox-uninstallation)
 *   [Troubleshooting](#troubleshooting)
 *   [Contact](#contact)
@@ -135,11 +136,15 @@ $ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-previe
 
 This will cause K8s to run the sysbox installation daemonset on all nodes
 labeled with `name=sysbox-deploy-k8s` in the prior step. The daemonset will
-"drop" Sysbox into the node and configure CRI-O appropriately (takes a few
-seconds). After this the daemonset will remain idle until deleted.
+"drop" Sysbox into the node and restart CRI-O. After this the daemonset will
+remain idle until deleted.
 
-Be sure to apply the `sysbox-rbac.yaml` before the `sysbox-deploy-k8s.yaml`, as
-otherwise K8s won't schedule the daemonset.
+**NOTE: The CRI-O restart is necessary in order for it to pick up the presence of
+the Sysbox runtime. Unfortunately this will temporarily disrupt all pods on the
+nodes where Sysbox is installed, for ~1 minute. For example the output of
+`kubectl get all --all-namespaces` will show errors on pods deployed on the
+affected nodes. After about 1 minute, those pods should return to "running"
+state. See the [troubleshooting doc](docs/troubleshoot.md) for more info.**
 
 3.  Verify all is good:
 
@@ -311,7 +316,7 @@ Sysbox removal from a host is done by reverting the installation steps. First
 stop all Sysbox pods on the node (if necessary drain the node). Then
 follow these steps:
 
-* Delete the k8s runtime class resource.
+*   Delete the k8s runtime class resource.
 
 ```console
 $ kubectl delete runtimeclass sysbox-runc
@@ -330,6 +335,10 @@ $ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-previ
 $ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml
 $ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml
 ```
+
+**NOTE: The sysbox-cleanup-k8s daemonset will remove Sysbox from the host and
+restart CRI-O. Unfortunately this will temporarily disrupt all pods on the nodes
+where Sysbox was installed, for ~1 minute.**
 
 *   Finally, remove the sysbox RBAC daemonset.
 

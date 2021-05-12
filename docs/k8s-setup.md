@@ -14,11 +14,16 @@ use CRI-O as the runtime.
 
 *   [K8s Master Node Setup](#k8s-master-node-setup)
 *   [K8s Worker Node Setup](#k8s-worker-node-setup)
-    *   [Installing Ubuntu Focal or Bionic](#installing-ubuntu-focal-or-bionic)
-    *   [Installing CRI-O on a K8s Worker Node](#installing-cri-o-on-a-k8s-worker-node)
-    *   [Configuring K8s to use CRI-O](#configuring-k8s-to-use-cri-o)
-    *   [Installing Shiftfs on a K8s Worker Node](#installing-shiftfs-on-a-k8s-worker-node)
-    *   [Installing rsync on a K8s worker node](#installing-rsync-on-a-k8s-worker-node)
+*   [Installing Ubuntu Focal or Bionic](#installing-ubuntu-focal-or-bionic)
+*   [Installing CRI-O on a K8s Worker Node](#installing-cri-o-on-a-k8s-worker-node)
+    *   [CRI-O Installation Steps](#cri-o-installation-steps)
+    *   [Easy Method: CRI-O Installation Daemonset](#easy-method-cri-o-installation-daemonset)
+    *   [Harder Method: Manual CRI-O Installation](#harder-method-manual-cri-o-installation)
+*   [Configuring K8s to use CRI-O](#configuring-k8s-to-use-cri-o)
+    *   [Configuring a new K8s worker node with CRI-O](#configuring-a-new-k8s-worker-node-with-cri-o)
+    *   [Reconfiguring an existing K8s worker node with CRI-O](#reconfiguring-an-existing-k8s-worker-node-with-cri-o)
+*   [Installing Shiftfs on a K8s Worker Node](#installing-shiftfs-on-a-k8s-worker-node)
+*   [Installing rsync on a K8s worker node](#installing-rsync-on-a-k8s-worker-node)
 *   [Conclusion](#conclusion)
 
 ## K8s Master Node Setup
@@ -55,9 +60,9 @@ The worker node setup is composed of the following steps:
 
 5.  Install [rsync](https://packages.ubuntu.com/search?keywords=rsync) on the node.
 
-The sub-sections below describe each of these in detail.
+The sections below describe each of these in detail.
 
-### Installing Ubuntu Focal or Bionic
+## Installing Ubuntu Focal or Bionic
 
 Make sure your worker node host has Ubuntu Focal (20.04) or Ubuntu Bionic
 (18.04).
@@ -69,7 +74,7 @@ can upgrade it with:
 $ sudo apt-get update && sudo apt install --install-recommends linux-generic-hwe-18.04 -y
 ```
 
-### Installing CRI-O on a K8s Worker Node
+## Installing CRI-O on a K8s Worker Node
 
 CRI-O is a light-weight container manager/runtime developed specifically for K8s
 (primarily by RedHat). It's a lighter alternative to the heavier containerd.
@@ -94,7 +99,7 @@ installed.
     rootless pods (i.e., maps the pod's root user to the root user on the
     host). We are working to resolve this with the CRI-O developers.
 
-#### CRI-O Installation Steps
+### CRI-O Installation Steps
 
 There are two methods to install CRI-O:
 
@@ -105,7 +110,7 @@ There are two methods to install CRI-O:
 
 Both of these are described below.
 
-#### Easy Method: CRI-O Installation Daemonset
+### Easy Method: CRI-O Installation Daemonset
 
 Steps 2 & 3 [above](#k8s-worker-node-setup) can done easily with the help of a
 CRI-O deployment daemonset that we've written. This daemonset installs CRI-O on
@@ -129,8 +134,8 @@ process).
 2.  Deploy the Sysbox installation daemonset:
 
 ```console
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/crio-deploy-rbac.yaml
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-deploy-k8s.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/rbac/crio-deploy-rbac.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-deploy-k8s.yaml
 ```
 
 This will cause K8s to run the CRI-O installation daemonset on all nodes
@@ -177,15 +182,16 @@ That's it. After this, you can install Sysbox on the node as described
 If you with to remove CRI-O from the node, follow these steps:
 
 ```
-kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-deploy-k8s.yaml
-kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
-kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
-kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/crio-deploy-rbac.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-deploy-k8s.yaml
+kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/rbac/crio-deploy-rbac.yaml
 ```
 
-#### Harder Method: Manual CRI-O Installation
+### Harder Method: Manual CRI-O Installation
 
-The installation steps for CRI-O are here: https://cri-o.io/
+If you don't wish to install CRI-O via the [daemonset](#easy-method-cri-o-installation-daemonset),
+you can install CRI-O manually. The installation steps for CRI-O are here: https://cri-o.io/
 
 For example, to install CRI-O v1.20 on a Ubuntu-Focal (20.04) host follow these steps.
 
@@ -283,7 +289,9 @@ Either cgroup mode (legacy or systemd-managed) works with Sysbox.
 
 If you hit problems when re-starting CRI-O, see the [troubleshooting doc](troubleshoot.md).
 
-### Configuring K8s to use CRI-O
+## Configuring K8s to use CRI-O
+
+**NOTE: if you installed CRI-O via the crio-deploy-K8s daemonset, you can skip this section.**
 
 Once CRI-O is installed on the Kubernetes worker node, the next step is to
 configure the Kubelet to use CRI-O. By default the Kubelet will use containerd.
@@ -294,7 +302,7 @@ want to switch its runtime config from containerd to CRI-O.
 
 Both of these are described below.
 
-#### Configuring a new K8s worker node with CRI-O
+### Configuring a new K8s worker node with CRI-O
 
 If you are doing a fresh initialization of K8s on a worker node (i.e., you are
 joining the worker node to a K8s cluster) then you are typically doing this with
@@ -357,7 +365,7 @@ k8s-node1   Ready    control-plane,master   3d19h   v1.20.2
 k8s-node2   Ready    <none>                 3d4h    v1.20.2
 ```
 
-#### Reconfiguring an existing K8s worker node with CRI-O
+### Reconfiguring an existing K8s worker node with CRI-O
 
 If you have a K8s worker node that was previously initialized (e.g., a worker
 node on a GKE cluster) but you want to switch the container runtime from
@@ -395,7 +403,7 @@ $ kubectl get nodes
 If all is good, the worker node in which we just reconfigured the kubelet should
 show up as "Ready" in the K8s node list.
 
-### Installing Shiftfs on a K8s Worker Node
+## Installing Shiftfs on a K8s Worker Node
 
 Shiftfs is a kernel module that perform user-ID and group-ID "shifting". It's
 needed if you will be mounting host files or directories onto pods created with
@@ -442,7 +450,7 @@ author:         James Bottomley
 ...
 ```
 
-### Installing rsync on a K8s worker node
+## Installing rsync on a K8s worker node
 
 Rsync is used by Sysbox for efficient data transfers inside the host (rsync data is
 never copied outside the host).

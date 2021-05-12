@@ -96,6 +96,95 @@ installed.
 
 #### CRI-O Installation Steps
 
+There are two methods to install CRI-O:
+
+* The easy way: using a daemonset that we've written that installs CRI-O on the
+  desired worker nodes.
+
+* The harder way: manually installing CRI-O and configuring the Kubelet.
+
+Both of these are described below.
+
+#### Easy Method: CRI-O Installation Daemonset
+
+Steps 2 & 3 [above](#k8s-worker-node-setup) can done easily with the help of a
+CRI-O deployment daemonset that we've written. This daemonset installs CRI-O on
+the desired K8s worker nodes and configures the Kubernetes Kubelet on those
+nodes to use CRI-O.
+
+Follow these steps:
+
+1.  Add the K8s label "crio-install=yes" to the worker nodes where CRI-O should
+    be installed.
+
+```console
+$ kubectl label nodes <node-name> crio-install=yes
+```
+
+You should only label K8s worker nodes. Do NOT label K8s master nodes because
+the CRI-O deploy daemonset will restart the Kubelet, thus bringing down the node
+temporarily (and you don't want to bring down the K8s control-plane in the
+process).
+
+2.  Deploy the Sysbox installation daemonset:
+
+```console
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/crio-deploy-rbac.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-deploy-k8s.yaml
+```
+
+This will cause K8s to run the CRI-O installation daemonset on all nodes
+labeled with `crio-install=yes` in the prior step. The daemonset will
+"drop" CRI-O into the node and restart the Kubelet. The process can
+take several seconds (e.g., 30 secs). After this, the daemonset will
+remain idle until deleted.
+
+**NOTE: Do not delete the daemonset unless you want to remove CRI-O from the
+worker node(s).**
+
+3.  Verify all is good:
+
+*   You should see the "crio-deploy-k8s" daemonset running.
+
+*   The installation daemonset will add a label to the node:
+    `crio-runtime=running`. This label means CRI-O is running on the node.
+
+*   Each node will have a "crio-deploy-k8s" pod running. The pods logs
+    should look like this:
+
+```console
+$ kubectl -n kube-system logs -f pod/crio-deploy-k8s-d4ckz
+Deploying CRI-O installer agent on the host ...
+Running CRI-O installer agent on the host (may take several seconds) ...
+Stopping the CRI-O installer agent on the host ...
+Removing CRI-O installer agent from the host ...
+Configuring CRI-O ...
+Restarting CRI-O ...
+Restarting Kubelet ...
+```
+
+*   In each worker node where the daemonset was deployed, you should see
+    CRI-O running properly, and kubelet running properly.
+
+```console
+systemctl status crio
+systemctl status kubelet
+```
+
+That's it. After this, you can install Sysbox on the node as described
+[here](../README.md#sysbox-installation).
+
+If you with to remove CRI-O from the node, follow these steps:
+
+```
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-deploy-k8s.yaml
+kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/crio-deploy-rbac.yaml
+```
+
+#### Harder Method: Manual CRI-O Installation
+
 The installation steps for CRI-O are here: https://cri-o.io/
 
 For example, to install CRI-O v1.20 on a Ubuntu-Focal (20.04) host follow these steps.

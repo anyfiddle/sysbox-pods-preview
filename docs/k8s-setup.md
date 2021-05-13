@@ -416,7 +416,7 @@ where Sysbox was installed, for up to 1 minute.**
 Finally, remove the sysbox RBAC daemonset.
 
 ```console
-$ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml
 ```
 
 This will uninstall Sysbox from the nodes and remove the "sysbox-runtime=running" label from them.
@@ -429,19 +429,19 @@ go back to containerd), see the next section.
 If you installed CRI-O via the installation daemonset, follow these steps to remove it:
 
 ```console
-kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-deploy-k8s.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-deploy-k8s.yaml
 ```
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
+kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
 ```
 
 ```console
-kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-cleanup-k8s.yaml
 ```
 
 ```console
-kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/crio-deploy-k8s/k8s-manifests/rbac/crio-deploy-rbac.yaml
+kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/crio-deploy-rbac.yaml
 ```
 
 If you installed CRI-O manually, then you need to manually revert the steps in

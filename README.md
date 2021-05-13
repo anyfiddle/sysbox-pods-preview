@@ -134,6 +134,9 @@ process).
 
 ```console
 kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/crio-deploy-rbac.yaml
+```
+
+```console
 kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/crio-deploy-k8s.yaml
 ```
 
@@ -198,6 +201,9 @@ process).
 
 ```console
 kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/rbac/sysbox-rbac.yaml
+```
+
+```console
 kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-deploy-k8s.yaml
 ```
 
@@ -233,7 +239,7 @@ systemctl status crio
 4.  Add the Sysbox "runtime class" resource to K8s.
 
 ```console
-$ kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/runtime-class/sysbox-runtimeclass.yaml
+kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/runtime-class/sysbox-runtimeclass.yaml
 ```
 
 The runtime class informs Kubernetes that there is a new container runtime

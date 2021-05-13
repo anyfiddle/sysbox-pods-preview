@@ -403,6 +403,9 @@ kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview
 
 ```console
 kubectl apply -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml
+```
+
+```console
 kubectl delete -f https://raw.githubusercontent.com/nestybox/sysbox-pods-preview/master/k8s-manifests/daemonset/sysbox-cleanup-k8s.yaml
 ```
 
